@@ -2,4 +2,4 @@
 
 작업 인원 : 1명
 
-작업 툴 : java, javascript, oracle-sql, apche-tomcat, github
+작업 툴 : java, javascript, Oracle SQL, Spring framework, apche-tomcat, github
