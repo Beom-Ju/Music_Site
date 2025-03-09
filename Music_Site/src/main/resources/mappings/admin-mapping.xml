@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AdminDAO">
+
+<!-- 로그인 -->
+<select id="getAdmin" resultType="admin">
+	<![CDATA[
+		SELECT * FROM admin
+		WHERE id=#{id} AND pwd=#{pwd} 
+	]]>
+</select>
+
+<!-- 모든 가수 -->
+<select id="singerAll" resultType="singer">
+	<![CDATA[
+		SELECT row_number() over (ORDER BY regdate_year DESC) num, pseq, singer_image,
+			 singer_name, regdate_year, first_song
+		FROM singer
+		ORDER BY regdate_year DESC
+	]]>
+</select>
+
+<!-- 검색어에 따른 가수 결과 (페이징) -->
+<select id="listSingerPaging" parameterType="hashMap" resultType="singer">
+	<![CDATA[ 
+		SELECT num, pseq, singer_image, singer_name, regdate_year, first_song
+		FROM 
+			(SELECT num, pseq, singer_image, singer_name, regdate_year, first_song
+			FROM 
+				(SELECT row_number() over (ORDER BY regdate_year DESC) num, pseq, singer_image,
+						singer_name, regdate_year, first_song
+				FROM singer
+				WHERE singer_name LIKE '%' || #{keyword} || '%'
+				ORDER BY regdate_year DESC)
+			WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+	 WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+	]]>
+</select>
+
+<select id="listSingerCnt" parameterType="String" resultType="int">
+	<![CDATA[
+		SELECT Count(*)
+		FROM singer
+		WHERE singer_name LIKE '%' || #{keyword} || '%'
+	]]>
+</select>
+
+<!-- 가수 등록 -->
+<insert id="singerWrite">
+	<![CDATA[
+		INSERT INTO singer(pseq, singer_image, singer_name, regdate_year, first_song)
+		VALUES(singer_seq.nextval, #{singer_image}, #{singer_name}, #{regdate_year}, #{first_song})
+	]]>
+</insert>
+
+<!-- 가수 수정 -->
+<update id="singerUpdate">
+	<![CDATA[
+		UPDATE singer
+		SET singer_image=#{singer_image}, singer_name=#{singer_name},
+			regdate_year=#{regdate_year}, first_song=#{first_song}
+		WHERE pseq=#{pseq}
+	]]>
+</update>
+
+<!-- 가수 삭제 -->
+<delete id="singerDelete" parameterType="int">
+	<![CDATA[ 
+		DELETE FROM singer
+		WHERE pseq=#{pseq}
+	]]>
+</delete>
+
+<!-- 가수에 해당하는 앨범이 있는지 찾기 -->
+<select id="findAlbumBySinger" parameterType="Integer" resultType="int">
+	<![CDATA[
+		SELECT COUNT(*)
+		FROM album
+		WHERE pseq=#{pseq}
+	]]>
+</select>
+
+	
+
+<!-- 모든 앨범 -->
+<select id="albumAll" resultType="album">
+	<![CDATA[ 
+		SELECT row_number() over (ORDER BY regdate DESC) num, aseq, pseq, album_image, album_kind,
+				singer_name, album_name, regdate, genre, content, kpop, score, score_cnt
+		FROM album
+		ORDER BY regdate DESC
+	]]>
+</select>
+
+
+
+<!-- 앨범 등록 -->
+ 
+<insert id="albumWrite">
+	<![CDATA[
+		INSERT INTO album(aseq, pseq, album_image, album_kind,
+						singer_name, album_name, regdate, genre, content, kpop)
+		VALUES(album_seq.nextval, #{pseq}, #{album_image}, #{album_kind},
+				#{singer_name}, #{album_name}, TO_DATE(#{regdate}, 'YYYY-MM-DD'),
+				#{genre}, #{content}, #{kpop}) 
+	]]>
+</insert>
+
+<!-- 앨범 수정 -->
+<update id="albumUpdate">
+	<![CDATA[
+		UPDATE album
+		SET album_image=#{album_image}, album_kind=#{album_kind}, singer_name=#{singer_name}, album_name=#{album_name},
+			regdate=TO_DATE(#{regdate}, 'YYYY-MM-DD'), genre=#{genre}, content=#{content}, kpop=#{kpop}
+		WHERE aseq=#{aseq}
+	]]>
+</update>
+
+<!-- 앨범 삭제 -->
+<delete id="albumDelete" parameterType="int">
+	<![CDATA[ 
+		DELETE FROM album
+		WHERE aseq=#{aseq}
+	]]>
+</delete>
+
+<!-- 앨범에 해당하는 노래가 있는지 찾기 -->
+<select id="findSongByAlbum" parameterType="Integer" resultType="int">
+	<![CDATA[
+		SELECT COUNT(*)
+		FROM song
+		WHERE aseq=#{aseq}
+	]]>
+</select>
+
+<!-- 검색어에 따른 앨범 결과 (앨범명) -->
+<select id="listAlbumPaging" parameterType="hashMap" resultType="album">
+	<![CDATA[
+		SELECT  num, aseq, pseq, album_image, album_kind,
+				singer_name, album_name, regdate, content, kpop, score, score_cnt
+		FROM 
+			(SELECT  num, aseq, pseq, album_image, album_kind,
+					singer_name, album_name, regdate, content, kpop, score, score_cnt
+			FROM
+				(SELECT row_number() over (ORDER BY regdate DESC) num, aseq, pseq, album_image, album_kind,
+						singer_name, album_name, regdate, content, kpop, score, score_cnt
+				FROM album
+				WHERE album_name LIKE '%' || #{keyword} || '%'
+				ORDER BY regdate DESC)
+		 WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+	 WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+	]]>
+</select>
+
+<select id="listAlbumCnt" parameterType="String" resultType="int">
+	<![CDATA[
+		SELECT COUNT(*)
+		FROM album
+		WHERE album_name LIKE '%' || #{keyword} || '%'
+	]]>
+</select>
+
+
+
+<!-- 모든 노래 -->
+<select id="songAll" resultType="song">
+	<![CDATA[ 
+		SELECT row_number() over (ORDER BY A.regdate DESC) num, S.sseq, S.pseq, S.aseq, S.song_num, S.subject,
+				S.singer_name, S.album_name, S.good_cnt, S.listen_cnt, S.down_cnt, A.regdate
+		FROM Album A, song S
+		WHERE A.album_name = S.album_name AND
+        		A.aseq = S.aseq
+		ORDER BY A.regdate DESC
+	]]>
+</select>
+
+<!-- 검색어에 따른 노래 결과 (곡명으로) -->
+<select id="listSongPaging" parameterType="hashMap" resultType="song">
+	<![CDATA[
+	 SELECT num, aseq, pseq, sseq, album_image, album_name, genre,
+				   subject, singer_name, good_cnt, listen_cnt, title, kpop, regdate
+	 FROM
+		(SELECT  num, aseq, pseq, sseq, album_image, album_name, genre,
+				   subject, singer_name, good_cnt, listen_cnt, title, kpop, regdate
+		 FROM
+			(SELECT row_number() over (ORDER BY regdate DESC) num, A.aseq, A.pseq, S.sseq, A.album_image, A.album_name, A.genre,
+				   S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title, S.kpop, A.regdate
+			 FROM album A, song S
+			 WHERE  A.aseq = S.aseq AND
+					S.subject LIKE '%' || #{keyword} || '%'
+			 ORDER BY A.regdate DESC)
+		 WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+	 WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+	]]>
+</select>
+
+<select id="listSongCnt" parameterType="String" resultType="int">
+	<![CDATA[
+		SELECT COUNT(*)
+		FROM album A, song S
+		WHERE  A.aseq = S.aseq AND
+			S.subject LIKE '%' || #{keyword} || '%'
+	]]>
+</select>
+ 
+<!-- 노래 등록 -->
+
+<insert id="songWrite">
+	<![CDATA[
+		INSERT INTO song(sseq, pseq, aseq, song_num,
+						subject, singer_name, album_name, title, kpop)
+		VALUES(song_seq.nextval, #{pseq}, #{aseq}, #{song_num},
+				#{subject}, #{singer_name}, #{album_name}, #{title}, #{kpop}) 
+	]]>
+</insert>
+
+<!-- 노래 수정 -->
+<update id="songUpdate">
+	<![CDATA[
+		UPDATE song
+		SET song_num = #{song_num}, subject = #{subject}, singer_name = #{singer_name},
+			album_name = #{album_name}, title=#{title}, kpop=#{kpop}
+		WHERE sseq=#{sseq}
+	]]>
+</update>
+
+<!-- 노래 삭제 -->
+<delete id="songDelete" parameterType="int">
+	<![CDATA[
+		DELETE FROM song
+		WHERE sseq=#{sseq}
+	]]>
+</delete>
+
+<!-- 노래 좋아요 삭제 -->
+<delete id="deleteGood" parameterType="int">
+	<![CDATA[ 
+		DELETE FROM good
+		WHERE sseq = #{sseq}
+	]]>	
+</delete>
+
+<!-- 해당 노래에 따른 노래 들은 횟수 삭제 -->
+<delete id="deleteListen" parameterType="int">
+	<![CDATA[
+		DELETE FROM listen
+		WHERE sseq = #{sseq}
+	]]>
+</delete>
+
+<!-- 모든 댓글 리스트 -->
+<select id="cmtAll" resultType="cmt">
+	<![CDATA[
+		SELECT row_number() over (ORDER BY C.regdate DESC) num, C.cseq, C.aseq,
+			 	A.album_name, C.id, C.contents, C.regdate
+		FROM cmt C, Album A
+		WHERE C.aseq = A.aseq
+		ORDER BY C.regdate DESC
+	]]>
+</select>
+
+<!-- 모든 댓글 리스트 (페이징) -->
+<select id="listCmtPaging" parameterType="hashMap" resultType="cmt">
+	<![CDATA[
+	SELECT num, cseq, aseq,	album_name, id, contents, regdate
+	FROM
+		(SELECT num, cseq, aseq, album_name, id, contents, regdate
+		FROM
+			(SELECT row_number() over (ORDER BY C.regdate DESC) num, C.cseq, C.aseq,
+				 	A.album_name, C.id, C.contents, C.regdate
+			FROM cmt C, Album A
+			WHERE C.aseq = A.aseq AND
+				  C.id LIKE '%' || #{keyword} || '%'
+			ORDER BY C.regdate DESC)
+		WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+	 WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+	]]>
+</select>
+
+<select id="listCmtCnt" parameterType="String" resultType="int">
+	<![CDATA[
+		SELECT Count(*)
+		FROM cmt C, Album A
+		WHERE C.aseq = A.aseq AND
+			  C.id LIKE '%' || #{keyword} || '%'
+	]]>
+</select>
+
+<!-- 댓글 번호에 따라 댓글 삭제 -->
+<delete id="admin_cmtDelete" parameterType="int">
+	<![CDATA[
+		DELETE FROM cmt
+		WHERE cseq=#{cseq}
+	]]>
+	
+</delete>
+
+<!-- 앨범 번호에 따라 댓글 모두 삭제 -->
+<delete id="admin_cmtDeleteAll" parameterType="int">
+	<![CDATA[
+		DELETE FROM cmt
+		WHERE aseq=#{aseq}
+	]]>
+	
+</delete>
+
+<!-- 검색어에 따른 댓글 결과 -->
+<select id="adminSearchCmt" parameterType="String" resultType="cmt">
+	<![CDATA[ 
+		SELECT * FROM cmt
+		WHERE id LIKE '%' || #{keyword} || '%'
+	]]>
+</select>
+
+
+<!-- 모든 회원 -->
+<select id="memberAll" resultType="member">
+	<![CDATA[ 
+		SELECT row_number() over (ORDER BY regdate DESC) num, id, member_picture, name,
+				birth, gender, phone, email, zip_num, address1, address2,
+				d_zip_num, d_address1, d_address2, regdate, useyn
+		FROM member
+		ORDER BY regdate DESC
+	]]>
+</select>
+
+<!-- 검색어에 따른 회원 결과 -->
+<select id="listMemberPaging" parameterType="hashMap" resultType="member">
+	<![CDATA[ 
+	SELECT  num, id, member_picture, name,
+				birth, gender, phone, email, zip_num, address1, address2,
+				d_zip_num, d_address1, d_address2, regdate, useyn
+	FROM
+		(SELECT  num, id, member_picture, name,
+				birth, gender, phone, email, zip_num, address1, address2,
+				d_zip_num, d_address1, d_address2, regdate, useyn
+		FROM
+			(SELECT row_number() over (ORDER BY regdate DESC) num, id, member_picture, name,
+					birth, gender, phone, email, zip_num, address1, address2,
+					d_zip_num, d_address1, d_address2, regdate, useyn
+			FROM member
+			WHERE name LIKE '%' || #{keyword} || '%'
+			ORDER BY regdate DESC)
+		WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+	 WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+	]]>
+</select>
+
+
+<select id="listMemberCnt" parameterType="String" resultType="int">
+	<![CDATA[
+		SELECT Count(*)
+		FROM member
+		WHERE name LIKE '%' || #{keyword} || '%'
+	]]>
+</select>
+
+
+<!-- 모든 qna 리스트 -->
+<select id="qnaAll" resultType="qna">
+	<![CDATA[
+		SELECT row_number() over (ORDER BY regdate DESC) num, qseq, id, kind, subject, content,
+				picture, reply, rep, regdate
+		FROM qna
+		ORDER BY regdate DESC
+	]]>
+</select>
+
+<!-- qna 처리 완료로 -->
+<update id="qnaUpdate">
+	<![CDATA[ 
+		UPDATE qna
+		SET rep = '2',
+			reply = #{reply}
+		WHERE qseq = #{qseq}
+	]]>
+</update>
+
+<!-- 검색어에 따른 qna 결과 -->
+<select id="listQnaPaging" parameterType="hashMap" resultType="qna">
+	<![CDATA[ 
+	SELECT num, qseq, id, kind, subject, content, picture, reply, rep, regdate
+	FROM
+		(SELECT num, qseq, id, kind, subject, content, picture, reply, rep, regdate
+		FROM
+			(SELECT row_number() over (ORDER BY regdate DESC) num, qseq, id, kind, subject, content,
+					picture, reply, rep, regdate
+			FROM qna
+			WHERE id LIKE '%' || #{keyword} || '%'
+			ORDER BY regdate DESC)
+		WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+	 WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+	]]>
+</select>
+
+<select id="listQnaCnt" parameterType="String" resultType="int">
+	<![CDATA[
+		SELECT Count(*)
+		FROM qna
+		WHERE id LIKE '%' || #{keyword} || '%'
+	]]>
+</select>
+
+<!-- 차트 -->
+
+<resultMap type="com.green.biz.member.DelRate" id="delMap">
+	<result column="reason" property="reason"/>
+	<result column="reason_cnt" property="reason_cnt"/>
+</resultMap>
+
+<!-- 탈퇴 사유 -->
+<select id="getDelReasons" resultMap="delMap">
+	SELECT reason, reason_cnt
+	FROM del
+	WHERE etcyn = 'n'
+	ORDER BY reason
+</select>
+
+<!-- 탈퇴 사유 기타 -->
+<select id="getDelReasonsEtc" resultType="delete">
+	SELECT reason, reason_cnt
+	FROM del
+	WHERE etcyn = 'y'
+	ORDER BY reason
+</select>
+
+</mapper>

@@ -1,0 +1,674 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AlbumDAO">
+
+	<!-- 최신 앨범 조회 (8개) -->
+	<select id="listAlbum" resultType="album">
+		/*listAlbum 최신 앨범 리스트 조회(8개)*/
+		<![CDATA[ 
+			SELECT * FROM new_album_view
+		]]>
+	</select>
+	
+	<!-- 최신 앨범 조회 (전체) -->
+	<select id="listAlbumAll" resultType="song">
+		/*listAlbumAll 최신 앨범 리스트 조회(조회)*/
+		<![CDATA[
+			SELECT * FROM new_album_all
+		]]>
+	</select>
+	
+	<!-- 최신 앨범 조회 (전체, 국내) -->
+	<select id="listAlbumKor" resultType="song">
+		<![CDATA[
+			SELECT * FROM new_album_kor
+		]]>
+	</select>
+	
+	<!-- 최신 앨범 조회 (전체, 해외) -->
+	<select id="listAlbumOver" resultType="song">
+		<![CDATA[
+			SELECT * FROM new_album_over
+		]]>
+	</select>
+	
+	<!-- 앨범 상세 정보 -->
+	<select id="albumInfo" resultType="album">
+		<![CDATA[
+			SELECT * FROM album
+			WHERE aseq = #{aseq}
+		]]>
+	</select>
+	
+	<!-- 앨범에 해당하는 노래 리스트 조회 -->
+	<select id="songList" resultType="song">
+		<![CDATA[
+			SELECT * FROM song
+			WHERE aseq = #{aseq}
+			ORDER BY song_num ASC
+		]]>
+	</select>
+	
+	<!-- 노래 상세 정보 -->
+	<select id="songInfo" resultType="song">
+		<![CDATA[
+			SELECT * FROM song
+			WHERE sseq=#{sseq}
+		]]>
+		
+	</select>
+	
+	
+	
+	<!-- 해당 가수 정보 조회 -->
+	<select id="getSinger" parameterType="int" resultType="singer">
+		<![CDATA[
+			SELECT * FROM singer
+			WHERE pseq=#{pseq}
+		]]>
+	</select>
+	
+	<!-- 가수에 해당하는 앨범 조회 -->
+	<select id="albumListBySinger" parameterType="hashMap" resultType="album">
+		<![CDATA[
+		SELECT num, aseq, pseq, album_image, album_kind, singer_name, album_name, regdate,
+					genre, content, kpop, score, score_cnt
+		FROM 
+			(SELECT num, aseq, pseq, album_image, album_kind, singer_name, album_name, regdate,
+					genre, content, kpop, score, score_cnt
+			FROM 
+				(SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, album_image, album_kind, singer_name, album_name, regdate,
+						genre, content, kpop, score, score_cnt
+				FROM album
+				WHERE pseq = #{pseq}
+				ORDER BY regdate DESC)
+			WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+		WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	
+	<select id="albumListBySingerCnt" parameterType="int" resultType="int">
+		<![CDATA[
+			SELECT Count(*)
+			FROM album
+			WHERE pseq = #{pseq}
+		]]>
+	
+	</select>	
+	
+	<!-- 가수에 해당하는 노래 조회 -->
+	<select id="songListBySinger" parameterType="hashMap" resultType="song">
+		<![CDATA[
+		SELECT num, sseq, pseq, subject, singer_name, good_cnt, listen_cnt, title, aseq, album_name, regdate
+		FROM
+			(SELECT num, sseq, pseq, subject, singer_name, good_cnt, listen_cnt, title, aseq, album_name, regdate
+			FROM
+				(SELECT row_number() over (ORDER BY regdate DESC) AS num, sseq, pseq, subject, singer_name, good_cnt, listen_cnt, title, aseq, album_name, regdate
+				FROM(SELECT S.sseq, S.pseq, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title, A.aseq, A.album_name, A.regdate
+		    		 FROM song S, album A
+		    		 WHERE S.album_name = A.album_name AND
+		            		S.aseq = A.aseq)
+		        WHERE pseq = #{pseq}
+	    		ORDER BY regdate DESC)
+	   		WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+		WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	
+	<select id="songListBySingerCnt" parameterType="int" resultType="int">
+		<![CDATA[
+			SELECT Count(*)
+			FROM(SELECT S.sseq, S.pseq, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title, A.aseq, A.album_name, A.regdate
+	    		 FROM song S, album A
+	    		 WHERE S.album_name = A.album_name AND
+	            		S.aseq = A.aseq)
+		    WHERE pseq = #{pseq}
+		]]>
+	
+	</select>
+	
+	
+	
+	<!-- 순위에 따른 노래 리스트 조회 (상위 10개) -->
+	<select id="songListByCnt" resultType="song">
+		<![CDATA[
+			SELECT * FROM song_list_cnt
+		]]>
+	</select>
+	
+	
+	<!-- 순위에 따른 노래 리스트 조회 (상위 100개, 전체) -->
+	<select id="songListByCntAll" parameterType="hashMap" resultType="song">
+		<![CDATA[
+			SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+			FROM
+				(SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+				FROM
+					(SELECT ROW_NUMBER() OVER (ORDER BY listen_cnt DESC) AS num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+					FROM (SELECT sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+					        FROM song
+					        ORDER BY listen_cnt desc)
+					WHERE rownum <= 100)
+				WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+			WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	 
+	<!-- 순위에 따른 노래 리스트 조회 (상위 100개, 국내) -->
+	<select id="songListByCntKor" parameterType="hashMap" resultType="song">
+		<![CDATA[
+			SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+			FROM
+				(SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+				FROM
+					(SELECT ROW_NUMBER() OVER (ORDER BY listen_cnt DESC) AS num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+					FROM (SELECT sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+					        FROM song
+					        WHERE kpop='y'
+					        ORDER BY listen_cnt desc)
+					WHERE rownum <= 100)
+				WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+			WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	
+	<!-- 순위에 따른 노래 리스트 조회 (상위 100개, 해외) -->
+	<select id="songListByCntOver" parameterType="hashMap" resultType="song">
+		<![CDATA[
+			SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+			FROM
+				(SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+				FROM
+					(SELECT ROW_NUMBER() OVER (ORDER BY listen_cnt DESC) AS num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+					FROM (SELECT sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, kpop
+					        FROM song
+					        WHERE kpop='n'
+					        ORDER BY listen_cnt desc)
+					WHERE rownum <= 100)
+				WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+			WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(발라드) -->
+	<select id="genreBallad" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Ballad')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(락) -->
+	<select id="genreRock" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Rock')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(댄스) -->
+	<select id="genreDance" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Dance')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(OST) -->
+	<select id="genreOst" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'OST')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(팝) -->
+	<select id="genrePop" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Pop')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(Rap/Hip-Hop) -->
+	<select id="genreRap" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Rap/Hip-Hop')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(R&B/Soul) -->
+	<select id="genreRnb" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'R&B/Soul')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(Trot) -->
+	<select id="genreTrot" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Trot')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(Indie) -->
+	<select id="genreIndie" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Indie')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 장르에 따른 노래 리스트 조회(Folk/Blues) -->
+	<select id="genreFolk" resultType="song">
+		<![CDATA[ 
+			SELECT row_number() over (ORDER BY regdate DESC) AS num, aseq, pseq, sseq, album_image,
+					album_name, genre, subject, singer_name, good_cnt, listen_cnt, title,
+					kpop, regdate
+			FROM(SELECT A.aseq, A.pseq, S.sseq, A.album_image,
+					A.album_name, A.genre, S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title,
+					S.kpop, A.regdate
+				FROM album A, song S
+				WHERE A.album_name = S.album_name AND
+				        A.aseq = S.aseq AND
+				        S.title = 'y' AND
+				        A.genre = 'Folk/Blues')
+			ORDER BY regdate desc
+		]]>
+	</select>
+	
+	<!-- 앨범 평점 누른 앨범 번호 및 계정 찾기 -->
+	<select id="findGradeCnt" resultType="int">
+		<![CDATA[ 
+			SELECT COUNT(*)
+			FROM grade
+			WHERE aseq=#{aseq} AND id = #{id}
+		]]>
+	</select>
+	
+	<!-- 앨범 평점 누른 앨범 사람 수 -->
+	<select id="findGradeMemberCnt" parameterType="int" resultType="int">
+		<![CDATA[ 
+			SELECT COUNT(*)
+			FROM grade
+			WHERE aseq=#{aseq}
+		]]>
+	</select>
+	
+	<!-- 앨범 평점 등록 -->
+	<insert id="addGradeCnt">
+		<![CDATA[
+			INSERT INTO grade(rseq, aseq, id, rate)
+			VALUES(grade_seq.nextval, #{aseq}, #{id}, #{rate})
+		]]>
+	</insert>
+	
+	<!-- 앨범 평점 계산 -->
+	<select id="gradeRate" parameterType="int" resultType="double">
+		<![CDATA[
+			SELECT sum(rate)/count(*)
+			FROM grade
+			WHERE aseq=#{aseq}
+		]]>
+	</select>
+	
+	<!-- 앨범 평점 업데이트 -->
+	<update id="updateScore">
+		<![CDATA[
+			UPDATE album
+			SET score = #{score}
+			WHERE aseq = #{aseq}
+		]]>
+	</update>
+	
+	
+	<!-- 노래 좋아요 누른 노래 번호 및 계정 찾기 -->
+	<select id="findClickCnt" resultType="int">
+		<![CDATA[
+			SELECT COUNT(*)
+			FROM good
+			WHERE sseq = #{sseq} AND id = #{id}
+		]]>
+	</select>
+	
+	<!-- 노래 좋아요 등록 -->
+	<insert id="addClickCnt">
+		<![CDATA[
+			INSERT INTO good(gseq, sseq, id)
+			VALUES(good_seq.nextval, #{sseq}, #{id})
+		]]>
+	</insert>
+	
+	<!-- 노래 좋아요 취소 -->
+	<delete id="deleteClickCnt">
+		<![CDATA[ 
+			DELETE FROM good
+			WHERE sseq = #{sseq} AND id = #{id}
+		]]>	
+	</delete>
+
+	<!-- 각 노래 좋아요 합계 -->
+	<select id="sumClickCnt" parameterType="int" resultType="int">
+		<![CDATA[
+			SELECT sum(click_cnt)
+			FROM good
+			WHERE sseq = #{sseq}
+		]]>
+	</select>
+	
+	<!-- 아이디에 해당하는 노래 좋아요 찾기 -->
+	<select id="findClickId" parameterType="String" resultType="good">
+		<![CDATA[ 
+			SELECT *
+			FROM good
+			WHERE id = #{id}
+		]]>
+	</select>
+	
+	<!-- 노래 좋아요 대입-->
+	<update id="updateGoodCnt">
+		<![CDATA[
+			UPDATE song
+			SET good_cnt = #{good_cnt}
+			WHERE sseq = #{sseq}
+		]]>
+	</update>
+	
+	<!-- 아이디에 따른 좋아요 체크한 리스트 -->
+	<select id="goodSongListById" parameterType="hashMap" resultType="song">
+		<![CDATA[
+			SELECT  num, sseq, pseq, aseq, subject, singer_name, album_name,
+						good_cnt, listen_cnt, gseq, id, click_cnt
+			FROM 
+				(SELECT  num, sseq, pseq, aseq, subject, singer_name, album_name,
+						good_cnt, listen_cnt, gseq, id, click_cnt
+				FROM 
+					(SELECT row_number() over (ORDER BY G.regdate DESC) AS num, S.sseq, S.pseq, S.aseq,
+							S.subject, S.singer_name, S.album_name, S.good_cnt, S.listen_cnt, G.gseq, G.id, G.click_cnt
+					FROM song S, good G
+					WHERE S.sseq = G.sseq AND
+							G.id = #{id}
+					ORDER BY G.regdate DESC)
+				WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+			WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	
+	<select id="goodSongListByIdCnt" parameterType="String" resultType="int">
+		<![CDATA[ 
+			SELECT Count(*)
+			FROM song S, good G
+			WHERE S.sseq = G.sseq AND
+					G.id = #{id}
+		]]>
+	</select>
+
+	
+	<!-- 노래 듣기 추가 -->
+	<insert id="addListenCnt">
+		<![CDATA[
+			INSERT INTO listen(lseq, sseq, id)
+			VALUES(listen_seq.nextval, #{sseq}, #{id})
+		]]>
+	</insert>
+	
+	<!-- 노래 들은 횟수 있는지 확인 -->
+	<select id="findListenCntById" resultType="int">
+		<![CDATA[
+			SELECT COUNT(*)
+			FROM listen
+			WHERE sseq = #{sseq} AND id = #{id}
+		]]>
+	</select>
+	
+	<!-- 각 노래 듣은 횟수 합 -->
+	<select id="sumListenClickCnt" parameterType="int" resultType="int">
+		<![CDATA[ 
+			SELECT sum(listen_click_cnt)
+			FROM listen
+			WHERE sseq = #{sseq}
+		]]>
+	</select>
+	
+	<!-- 노래 좋아요 대입-->
+	<update id="updateListenCnt">
+		<![CDATA[
+			UPDATE song
+			SET listen_cnt = #{listen_cnt}
+			WHERE sseq = #{sseq}
+		]]>
+	</update>
+	
+	<!-- 노래 들은 횟수 증가 -->
+	<update id="listenCntById">
+		<![CDATA[
+			UPDATE listen 
+			SET listen_click_cnt = listen_click_cnt + 1
+			WHERE sseq = #{sseq} AND id = #{id}
+		]]>
+	</update>
+	
+	<!-- 아이디에 따른 많이 들은 노래 리스트 순서 -->
+	<select id="listenSongListById" parameterType="hashMap" resultType="song">
+		<![CDATA[
+			SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, lseq, id, listen_click_cnt
+			FROM
+				(SELECT num, sseq, pseq, aseq, subject, singer_name, album_name, good_cnt, listen_cnt, lseq, id, listen_click_cnt
+				FROM
+					(SELECT row_number() over (ORDER BY L.listen_click_cnt DESC) AS num, S.sseq, S.pseq, S.aseq, S.subject, S.singer_name, S.album_name, S.good_cnt, S.listen_cnt, L.lseq, L.id, L.listen_click_cnt
+					FROM song S, listen L
+					WHERE S.sseq = L.sseq AND
+							L.id = #{id}
+					ORDER BY L.listen_click_cnt DESC)
+				WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+			WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	
+	<select id="listenSongListByIdCnt" parameterType="String" resultType="int">
+		<![CDATA[
+			SELECT Count(*)
+			FROM song S, listen L
+			WHERE S.sseq = L.sseq AND
+				 L.id = #{id}
+		]]>
+	</select>
+	
+	<!-- 검색어에 따른 가수 결과 -->
+	<select id="searchSinger" parameterType="String" resultType="singer">
+		<![CDATA[ 
+			SELECT * FROM singer
+			WHERE singer_name LIKE '%' || #{keyword} || '%'
+		]]>
+	</select>
+	
+	<!-- 검색어에 따른 노래 결과 (곡명으로) -->
+	<select id="searchSongBySong" parameterType="String" resultType="song">
+		<![CDATA[
+			SELECT row_number() over (ORDER BY regdate DESC) num, A.aseq, A.pseq, S.sseq, A.album_image, A.album_name, A.genre,
+				   S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title, S.kpop, A.regdate
+			FROM album A, song S
+			WHERE  A.aseq = S.aseq AND
+					S.subject LIKE '%' || #{keyword} || '%'
+			ORDER BY A.regdate DESC
+		]]>
+	</select>
+	
+	<!-- 검색어에 따른 노래 결과 (가수명으로) -->
+	<select id="searchSongBySinger" parameterType="String" resultType="song">
+		<![CDATA[
+			SELECT row_number() over (ORDER BY A.regdate DESC) num, A.aseq, A.pseq, S.sseq, A.album_image, A.album_name, A.genre,
+				   S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title, S.kpop, A.regdate
+			FROM album A, song S
+			WHERE  A.aseq = S.aseq AND
+					S.singer_name LIKE '%' || #{keyword} || '%'
+			ORDER BY A.regdate DESC
+		]]>
+	</select>
+	
+
+	<!-- 검색어에 따른 노래 결과 (앨범명으로) -->
+	<select id="searchSongByAlbum" parameterType="String" resultType="song">
+		<![CDATA[
+			SELECT row_number() over (ORDER BY A.regdate DESC) num, A.aseq, A.pseq, S.sseq, A.album_image, A.album_name, A.genre,
+				   S.subject, S.singer_name, S.good_cnt, S.listen_cnt, S.title, S.kpop, A.regdate
+			FROM album A, song S
+			WHERE  A.aseq = S.aseq AND
+					S.album_name LIKE '%' || #{keyword} || '%'
+			ORDER BY A.regdate DESC
+		]]>
+	</select>
+	
+	<!-- 검색어에 따른 앨범 결과 -->
+	<select id="searchAlbum" parameterType="String" resultType="album">
+		/*searchAlbum 검색어에 따른 앨범 결과*/
+		<![CDATA[
+			SELECT row_number() over (ORDER BY regdate DESC) num, aseq, pseq,
+					album_image, album_kind, singer_name, album_name, regdate
+			FROM album
+			WHERE album_name LIKE '%' || #{keyword} || '%' OR
+					singer_name LIKE '%' || #{keyword} || '%'
+			ORDER BY regdate DESC
+		]]>
+	</select>
+	
+	<!-- 인기 검색어 추가 -->
+	<insert id="insertKey">
+		/*insertKey 인기 검색어 추가*/
+		<![CDATA[
+			INSERT INTO MUSIC_KEY(kseq, keyword)
+			VALUES(key_seq.nextval, #{keyword})
+		]]>
+	</insert>
+	
+	<!-- 검색어 찾기 -->
+	<select id="findKey" parameterType="String" resultType="int">
+		/*findKey 검색어 찾기*/
+		<![CDATA[ 
+			SELECT count(*)
+			FROM MUSIC_KEY
+			WHERE keyword = #{keyword}
+		]]>
+	</select>
+	
+	<!-- 검색횟수 올리기 -->
+	<update id="updateKey">
+		/*updateKey 검색횟수 올리기*/
+		<![CDATA[
+			UPDATE MUSIC_KEY
+			SET search_cnt = search_cnt + 1
+			WHERE keyword = #{keyword}
+		]]>
+	</update>
+	
+	<select id="popularKey" resultType="key">
+		/*popularKey 인기 검색어 조회*/
+		SELECT
+		    ROWNUM AS RO
+		    ,X.*
+		FROM
+		(
+		    SELECT
+		        KEYWORD
+		    FROM
+		        MUSIC_KEY
+		    WHERE 1=1
+		    ORDER BY SEARCH_CNT DESC
+		)X
+		WHERE 1=1
+		    AND ROWNUM <![CDATA[ <= ]]> 10	
+	</select>
+</mapper>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="QnaDAO">
+	
+	<!-- 문의내역 목록 -->
+	<select id="getQnaList" parameterType="hashMap" resultType="qna">
+		<![CDATA[
+		SELECT num, qseq, id, kind, subject, content, picture, reply, rep, regdate
+		FROM
+			(SELECT num, qseq, id, kind, subject, content, picture, reply, rep, regdate
+			FROM
+				(SELECT row_number() over (ORDER BY qseq DESC) num, qseq, id, kind,
+					   subject, content, picture, reply, rep, regdate
+				FROM qna
+				WHERE id = #{id}
+				ORDER BY qseq DESC)
+			WHERE num <= #{criteria.pageNum} * #{criteria.numPerPage})
+		 WHERE num > (#{criteria.pageNum}-1) * #{criteria.numPerPage}
+		]]>
+	</select>
+	
+	<select id="getQnaListCnt" parameterType="String" resultType="int">
+		<![CDATA[ 
+			SELECT Count(*)
+			FROM qna
+			WHERE id = #{id}
+		]]>
+	</select>
+	
+	<!-- 문의내역 상세정보 -->
+	<select id="qnaDetail" parameterType="int" resultType="qna">
+		<![CDATA[
+			SELECT * FROM qna
+			WHERE qseq = #{qseq}
+		]]>
+	</select>
+
+	<!-- qna 등록 -->
+	<insert id="qnaWrite">
+		<![CDATA[
+			INSERT INTO qna(qseq, id, kind, subject, content, picture)
+			VALUES(qna_seq.nextval, #{id}, #{kind}, #{subject}, #{content}, #{picture})
+		]]>
+	</insert>
+</mapper>
