@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MemberDAO">
+
+	<!-- 아이디 중복 확인 -->
+	<select id="findMember" parameterType="String" resultType="member">
+		<![CDATA[
+			SELECT * FROM member WHERE id=#{id}
+		]]>
+	</select>
+
+	<!-- 주소 조회 -->
+	<select id="findAddress" parameterType="String" resultType="address">
+		<![CDATA[
+			SELECT * FROM address
+			WHERE dong LIKE '%' || #{dong} || '%'
+		]]>
+	</select>
+
+	<!-- 회원가입 -->
+	<insert id="insertMember">
+		<![CDATA[
+			INSERT INTO member(id, pwd, member_picture, name, birth, gender, phone, email, zip_num, address1, address2)
+			VALUES (#{id}, #{pwd}, #{member_picture}, #{name}, TO_DATE(#{birth}, 'YYYY-MM-DD'), #{gender}, #{phone}, #{email}, #{zip_num}, #{address1}, #{address2})
+		]]>
+	</insert>
+	
+	<!-- 로그인 -->
+	<select id="getMember" resultType="member">
+		<![CDATA[
+			SELECT * FROM member
+			WHERE id=#{id} AND pwd=#{pwd} 
+		]]>
+	</select>
+	
+	<!-- 아이디 찾기 (이메일로) -->
+	<select id="getId_Email" resultType="member">
+		<![CDATA[
+			SELECT * FROM member
+			WHERE name=#{name} AND
+				  email=#{email} AND
+				  useyn = 'y'
+		]]>
+		
+	</select>
+	
+	<!-- 아이디 찾기 (전화번호로) -->
+	<select id="getId_Phone" resultType="member">
+		<![CDATA[
+			SELECT * FROM member
+			WHERE name=#{name} AND
+				 phone=#{phone} AND
+				 useyn = 'y'
+					
+		]]>
+	</select>
+	
+	<!-- 비밀번호 찾기/변경 (이메일로) -->
+	<select id="getPwd_Email" resultType="member">
+		<![CDATA[
+			SELECT * FROM member
+			WHERE id=#{id} AND name=#{name} AND email=#{email}
+		]]>
+	</select>
+	
+	<!-- 비밀번호 찾기/변경 (전화번호로) -->
+	<select id="getPwd_Phone" resultType="member">
+		<![CDATA[
+			SELECT * FROM member
+			WHERE id=#{id} AND name=#{name} AND phone=#{phone}
+		]]>
+	</select>
+	
+	<!-- 비밀번호 수정 -->
+	<update id="updatePwd">
+		<![CDATA[ 
+			UPDATE member
+			SET pwd = #{pwd}
+			WHERE id = #{id}
+		]]>
+	</update>
+	
+	<!-- 계정 수정하기 -->
+	<update id="updateMember">
+		<![CDATA[ 
+			UPDATE member
+			SET pwd=#{pwd}, member_picture=#{member_picture}, name=#{name},
+				birth=TO_DATE(#{birth}, 'YYYY-MM-DD'), gender=#{gender}, phone=#{phone}, email=#{email},
+				zip_num=#{zip_num}, address1=#{address1}, address2=#{address2}
+			WHERE id=#{id}
+		]]>
+	</update>
+	
+	<!-- 탈퇴사유 업데이트 -->
+	
+	<!-- 탈퇴하기 (계정 삭제) -->
+	<update id="deleteMember" parameterType="String">
+		<![CDATA[
+			UPDATE member
+			SET useyn = 'n'
+			WHERE id = #{id}
+		]]>
+	</update>
+	
+	<!-- 탈퇴 이유 횟수 찾기 -->
+	<select id="findDelReason" resultType="int" parameterType="String">
+		<![CDATA[ 
+			SELECT COUNT(*)
+			FROM del
+			WHERE reason = #{reason}
+		]]>
+	</select>
+	
+	<!-- 탈퇴 이유 추가 -->
+	<insert id="insertDelReason">
+		<![CDATA[
+			INSERT INTO del(dseq, reason, etcyn)
+			VALUES(del_seq.nextval, #{reason}, #{etcyn})
+		]]>
+	</insert>
+	
+	<!-- 탈퇴 이유 횟수 업데이트 -->
+	<update id="updateDelReason" parameterType="String">
+		<![CDATA[
+			UPDATE del
+			SET reason_cnt = reason_cnt + 1
+			WHERE reason = #{reason}
+		]]>
+	</update>
+
+	<!-- 소개글 수정하기 -->
+	<update id="updateIntro">
+		<![CDATA[
+			UPDATE member
+			SET intro = #{intro}
+			WHERE id=#{id}
+		]]>
+	</update>
+</mapper>
